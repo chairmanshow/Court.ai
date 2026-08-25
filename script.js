@@ -1,4 +1,23 @@
 // ================================================================
+// 🔥 FIREBASE CONFIG - अपना Config यहाँ डालें
+// ================================================================
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
+
+// ================================================================
+// INIT FIREBASE
+// ================================================================
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const provider = new firebase.auth.GoogleAuthProvider();
+
+// ================================================================
 // DATA: INDIAN CONSTITUTION ARTICLES
 // ================================================================
 const constitutionArticles = [
@@ -27,6 +46,7 @@ const constitutionArticles = [
 // ================================================================
 let currentPage = 'loginPage';
 let isLoggedIn = false;
+let currentUser = null;
 const botName = 'Court AI';
 
 // ================================================================
@@ -39,6 +59,8 @@ const chatInput = document.getElementById('chatInput');
 const reelsContainer = document.getElementById('reelsContainer');
 const toastEl = document.getElementById('toast');
 const toastMsg = document.getElementById('toastMsg');
+const googleBtn = document.getElementById('googleSignInBtn');
+const loginError = document.getElementById('loginError');
 
 // ================================================================
 // UTILITY
@@ -60,11 +82,146 @@ updateStatusTime();
 setInterval(updateStatusTime, 30000);
 
 // ================================================================
+// FIREBASE AUTH
+// ================================================================
+function handleGoogleSignIn() {
+    loginError.style.display = 'none';
+    googleBtn.disabled = true;
+    googleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> कृपया प्रतीक्षा करें...';
+    
+    auth.signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+            currentUser = user;
+            isLoggedIn = true;
+            sessionStorage.setItem('courtAiLoggedIn', 'true');
+            sessionStorage.setItem('courtAiUser', JSON.stringify({
+                name: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                uid: user.uid
+            }));
+            showToast('✅ स्वागत है ' + user.displayName + '!');
+            updateUserUI(user);
+            navigateTo('homePage');
+            document.getElementById('reelBadge').textContent = constitutionArticles.length;
+            googleBtn.disabled = false;
+            googleBtn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" /> Google के साथ साइन इन करें`;
+        })
+        .catch((error) => {
+            console.error('Login error:', error);
+            loginError.style.display = 'block';
+            loginError.textContent = '❌ ' + error.message;
+            googleBtn.disabled = false;
+            googleBtn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" /> Google के साथ साइन इन करें`;
+            showToast('लॉगिन विफल: ' + error.message);
+        });
+}
+
+function handleLogout() {
+    auth.signOut().then(() => {
+        isLoggedIn = false;
+        currentUser = null;
+        sessionStorage.removeItem('courtAiLoggedIn');
+        sessionStorage.removeItem('courtAiUser');
+        navigateTo('loginPage');
+        showToast('🔒 लॉगआउट कर दिया गया');
+    }).catch((error) => {
+        showToast('लॉगआउट में त्रुटि: ' + error.message);
+    });
+}
+
+function updateUserUI(user) {
+    if (!user) {
+        // Try to load from session
+        const saved = sessionStorage.getItem('courtAiUser');
+        if (saved) {
+            try {
+                const data = JSON.parse(saved);
+                user = data;
+            } catch(e) {}
+        }
+    }
+    if (!user) return;
+    
+    const name = user.displayName || user.name || 'उपयोगकर्ता';
+    const email = user.email || '';
+    const photo = user.photoURL || '';
+    
+    // Avatar in header
+    const avatarImg = document.getElementById('avatarImg');
+    const userNameShort = document.getElementById('userNameShort');
+    if (avatarImg) {
+        avatarImg.src = photo || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23c9a84c"/%3E%3Ctext x="50" y="68" font-size="50" text-anchor="middle" fill="%230a1628" font-family="Arial"%3E⚖%3C/text%3E%3C/svg%3E';
+    }
+    if (userNameShort) {
+        userNameShort.textContent = name.split(' ')[0] || name.substring(0, 6);
+    }
+    
+    // Settings page
+    const settingsAvatar = document.getElementById('settingsAvatar');
+    const settingsName = document.getElementById('settingsName');
+    const settingsEmail = document.getElementById('settingsEmail');
+    if (settingsAvatar) settingsAvatar.src = photo || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23c9a84c"/%3E%3Ctext x="50" y="68" font-size="50" text-anchor="middle" fill="%230a1628" font-family="Arial"%3E⚖%3C/text%3E%3C/svg%3E';
+    if (settingsName) settingsName.textContent = name;
+    if (settingsEmail) settingsEmail.textContent = email || 'email@example.com';
+}
+
+function checkAuthState() {
+    const saved = sessionStorage.getItem('courtAiLoggedIn');
+    const userData = sessionStorage.getItem('courtAiUser');
+    if (saved === 'true' && userData) {
+        try {
+            const user = JSON.parse(userData);
+            currentUser = user;
+            isLoggedIn = true;
+            updateUserUI(user);
+            navigateTo('homePage');
+            document.getElementById('reelBadge').textContent = constitutionArticles.length;
+            return true;
+        } catch(e) {}
+    }
+    return false;
+}
+
+// Firebase auth state listener
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        currentUser = user;
+        isLoggedIn = true;
+        sessionStorage.setItem('courtAiLoggedIn', 'true');
+        sessionStorage.setItem('courtAiUser', JSON.stringify({
+            name: user.displayName,
+            email: user.email,
+            photoURL: user.photoURL,
+            uid: user.uid
+        }));
+        updateUserUI(user);
+        if (document.getElementById('loginPage').classList.contains('active')) {
+            navigateTo('homePage');
+        }
+        document.getElementById('reelBadge').textContent = constitutionArticles.length;
+    } else {
+        if (isLoggedIn) {
+            isLoggedIn = false;
+            currentUser = null;
+            sessionStorage.removeItem('courtAiLoggedIn');
+            sessionStorage.removeItem('courtAiUser');
+        }
+        if (document.getElementById('homePage').classList.contains('active') ||
+            document.getElementById('knowledgePage').classList.contains('active') ||
+            document.getElementById('settingsPage').classList.contains('active')) {
+            navigateTo('loginPage');
+        }
+    }
+});
+
+// ================================================================
 // NAVIGATION
 // ================================================================
 function navigateTo(pageId) {
     if (!isLoggedIn && pageId !== 'loginPage') {
-        showToast('कृपया पहले लॉगिन करें');
+        showToast('कृपया पहले Google से साइन इन करें');
         return;
     }
     pages.forEach(p => p.classList.remove('active'));
@@ -79,31 +236,8 @@ function navigateTo(pageId) {
     currentPage = pageId;
     if (pageId === 'knowledgePage') renderReels();
     if (pageId === 'homePage') setTimeout(() => chatInput.focus(), 300);
+    if (pageId === 'settingsPage' && currentUser) updateUserUI(currentUser);
 }
-
-// ================================================================
-// LOGIN
-// ================================================================
-function handleLogin() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass = document.getElementById('loginPassword').value.trim();
-    if (!email || !pass) {
-        showToast('कृपया ईमेल और पासवर्ड दोनों भरें');
-        return;
-    }
-    isLoggedIn = true;
-    sessionStorage.setItem('courtAiLoggedIn', 'true');
-    showToast('✅ स्वागत है! Court AI आपकी मदद के लिए तैयार है।');
-    navigateTo('homePage');
-    document.getElementById('reelBadge').textContent = constitutionArticles.length;
-}
-
-document.getElementById('loginPassword').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleLogin();
-});
-document.getElementById('loginEmail').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleLogin();
-});
 
 // ================================================================
 // CHATBOT
@@ -265,41 +399,19 @@ function loadSettings() {
 }
 
 // ================================================================
-// AUTO-LOGIN
-// ================================================================
-function autoLogin() {
-    if (sessionStorage.getItem('courtAiLoggedIn') === 'true') {
-        isLoggedIn = true;
-        navigateTo('homePage');
-        document.getElementById('reelBadge').textContent = constitutionArticles.length;
-    }
-}
-
-// ================================================================
-// INIT
-// ================================================================
-loadSettings();
-renderReels();
-autoLogin();
-if (!isLoggedIn) navigateTo('loginPage');
-setTimeout(() => { if (isLoggedIn) chatInput.focus(); }, 500);
-
-// ================================================================
 // KEYBOARD SHORTCUTS
 // ================================================================
 document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === '1') { e.preventDefault();
-        navigateTo('homePage'); }
-    if (e.ctrlKey && e.key === '2') { e.preventDefault();
-        navigateTo('knowledgePage'); }
-    if (e.ctrlKey && e.key === '3') { e.preventDefault();
-        navigateTo('settingsPage'); }
+    if (e.ctrlKey && e.key === '1') { e.preventDefault(); navigateTo('homePage'); }
+    if (e.ctrlKey && e.key === '2') { e.preventDefault(); navigateTo('knowledgePage'); }
+    if (e.ctrlKey && e.key === '3') { e.preventDefault(); navigateTo('settingsPage'); }
 });
 
 // ================================================================
 // EXPOSE GLOBALS
 // ================================================================
-window.handleLogin = handleLogin;
+window.handleGoogleSignIn = handleGoogleSignIn;
+window.handleLogout = handleLogout;
 window.navigateTo = navigateTo;
 window.sendMessage = sendMessage;
 window.sendQuickQuery = sendQuickQuery;
@@ -308,3 +420,24 @@ window.changeTheme = changeTheme;
 window.toggleDarkMode = toggleDarkMode;
 window.showToast = showToast;
 window.renderReels = renderReels;
+
+// ================================================================
+// INIT
+// ================================================================
+loadSettings();
+renderReels();
+
+// Check auth state
+if (!checkAuthState()) {
+    navigateTo('loginPage');
+}
+
+// Google button click
+googleBtn.addEventListener('click', handleGoogleSignIn);
+
+setTimeout(() => {
+    if (isLoggedIn) chatInput.focus();
+}, 500);
+
+console.log('🏛️ Court AI v3.0 loaded with Google Login!');
+console.log(`📚 ${constitutionArticles.length} अनुच्छेद उपलब्ध`);
