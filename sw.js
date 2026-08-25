@@ -1,4 +1,4 @@
-const CACHE_NAME = 'court-ai-v2';
+const CACHE_NAME = 'court-ai-v3';
 const urlsToCache = [
     '/',
     '/index.html',
@@ -6,10 +6,11 @@ const urlsToCache = [
     '/script.js',
     '/manifest.json',
     'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css',
-    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap'
+    'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js'
 ];
 
-// Install
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -20,7 +21,6 @@ self.addEventListener('install', event => {
     );
 });
 
-// Activate - clean old caches
 self.addEventListener('activate', event => {
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
@@ -36,32 +36,23 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Fetch - serve from cache, fallback to network
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-                // Clone request because it's a one-time use
+                if (response) return response;
                 const fetchRequest = event.request.clone();
-                return fetch(fetchRequest).then(
-                    response => {
-                        // Check if we received a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-                        // Clone response because it's a one-time use
-                        const responseToCache = response.clone();
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
+                return fetch(fetchRequest).then(response => {
+                    if (!response || response.status !== 200 || response.type !== 'basic') {
                         return response;
                     }
-                );
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME)
+                        .then(cache => {
+                            cache.put(event.request, responseToCache);
+                        });
+                    return response;
+                });
             })
     );
 });
