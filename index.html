@@ -33,7 +33,8 @@
 
         <!-- Pages Container -->
         <div class="pages-container">
-            <!-- Login Page -->
+
+            <!-- ===== LOGIN PAGE (Google Sign-In) ===== -->
             <div class="page active" id="loginPage">
                 <div class="login-brand">
                     <div class="logo-icon"><i class="fas fa-gavel"></i></div>
@@ -42,34 +43,35 @@
                     <div class="tagline">⚖️ भारतीय संविधान · न्याय · सुरक्षा</div>
                 </div>
                 <div class="login-form">
-                    <div class="input-group">
-                        <i class="fas fa-user"></i>
-                        <input type="text" id="loginEmail" placeholder="मोबाइल नंबर या ईमेल" value="user@courtai.in" />
-                    </div>
-                    <div class="input-group">
-                        <i class="fas fa-lock"></i>
-                        <input type="password" id="loginPassword" placeholder="पासवर्ड" value="court123" />
-                    </div>
-                    <button class="btn-login" onclick="handleLogin()">
-                        <i class="fas fa-arrow-right"></i> साइन इन करें
+                    <!-- Google Sign-In Button -->
+                    <button class="btn-google" id="googleSignInBtn">
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+                        Google के साथ साइन इन करें
                     </button>
-                    <div style="text-align:right;margin-top:10px;">
-                        <a href="#" style="color:var(--gold);font-size:12px;text-decoration:none;">पासवर्ड भूल गए?</a>
+                    <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--gray);">
+                        <i class="fas fa-shield-alt" style="color:var(--gold);"></i> सुरक्षित · निजी · भारतीय कानूनों के अनुरूप
                     </div>
+                    <div id="loginError" style="color:#e74c3c;font-size:13px;margin-top:12px;text-align:center;display:none;"></div>
                 </div>
                 <div class="login-footer">
-                    <p>नए उपयोगकर्ता? <a href="#">अभी रजिस्टर करें</a></p>
-                    <div class="legal-text">🔒 सुरक्षित · निजी · भारतीय कानूनों के अनुरूप</div>
+                    <div class="legal-text">🔒 Google Authentication · कोई पासवर्ड नहीं</div>
                 </div>
             </div>
 
-            <!-- Home Page (Chatbot) -->
+            <!-- ===== HOME PAGE (Chatbot) ===== -->
             <div class="page" id="homePage">
                 <div class="home-header">
-                    <div class="brand"><i class="fas fa-gavel"></i><h2>Court <span>AI</span></h2></div>
+                    <div class="brand">
+                        <i class="fas fa-gavel"></i>
+                        <h2>Court <span>AI</span></h2>
+                    </div>
                     <div class="header-actions">
                         <i class="fas fa-bell" onclick="showToast('कोई नई सूचना नहीं')"></i>
-                        <i class="fas fa-user-circle" onclick="navigateTo('settingsPage')" style="font-size:22px;"></i>
+                        <div class="user-avatar" id="userAvatar" onclick="navigateTo('settingsPage')">
+                            <img id="avatarImg" src="" alt="User" />
+                            <span id="userNameShort" style="font-size:12px;font-weight:600;color:var(--gold);"></span>
+                        </div>
+                        <i class="fas fa-sign-out-alt" onclick="handleLogout()" style="font-size:18px;color:var(--gray);cursor:pointer;"></i>
                     </div>
                 </div>
                 <div class="chat-container">
@@ -94,7 +96,7 @@
                 </div>
             </div>
 
-            <!-- Knowledge Page (Reels) -->
+            <!-- ===== KNOWLEDGE PAGE (Reels) ===== -->
             <div class="page" id="knowledgePage">
                 <div class="knowledge-header">
                     <h2><i class="fas fa-scroll"></i> संविधान रील्स</h2>
@@ -106,11 +108,24 @@
                 <div class="reels-container" id="reelsContainer"></div>
             </div>
 
-            <!-- Settings Page -->
+            <!-- ===== SETTINGS PAGE ===== -->
             <div class="page" id="settingsPage">
                 <div class="settings-header">
                     <h2><i class="fas fa-sliders-h"></i> अनुकूलन</h2>
                     <span style="font-size:12px;color:var(--gray);">मालिक पैनल</span>
+                </div>
+                <div class="settings-section">
+                    <div class="section-title">👤 प्रोफाइल</div>
+                    <div class="settings-item" style="cursor:default;">
+                        <div class="left">
+                            <img id="settingsAvatar" src="" alt="Avatar" style="width:40px;height:40px;border-radius:50%;border:2px solid var(--gold);" />
+                            <div>
+                                <div class="label" id="settingsName">उपयोगकर्ता</div>
+                                <div class="sub" id="settingsEmail">email@example.com</div>
+                            </div>
+                        </div>
+                        <div class="right"><i class="fas fa-check-circle" style="color:var(--gold);"></i></div>
+                    </div>
                 </div>
                 <div class="settings-section">
                     <div class="section-title">🎨 थीम कस्टमाइज़ करें</div>
@@ -164,7 +179,7 @@
                 <div class="settings-section">
                     <div class="section-title">ℹ️ ऐप की जानकारी</div>
                     <div class="settings-item" style="cursor:default;">
-                        <div class="left"><i class="fas fa-info-circle"></i><div><div class="label">संस्करण</div><div class="sub">Court AI v2.0 · भारतीय संविधान</div></div></div>
+                        <div class="left"><i class="fas fa-info-circle"></i><div><div class="label">संस्करण</div><div class="sub">Court AI v3.0 · Google Login</div></div></div>
                         <div class="right" style="font-size:12px;">2026</div>
                     </div>
                     <div class="settings-item" style="cursor:default;">
@@ -193,9 +208,14 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- ===== FIREBASE SDK ===== -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <!-- ===== SCRIPT ===== -->
     <script src="script.js"></script>
-    <!-- Service Worker Registration -->
+
+    <!-- ===== SERVICE WORKER ===== -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
